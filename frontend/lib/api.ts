@@ -13,15 +13,28 @@ import type {
   User,
 } from '@/types';
 
-// HAPA NDIPO MABADILIKO YALIPO: Tumeongeza /api mwishoni na kuhakikisha ni HTTPS
-const getBaseUrl = () => {
-  const url = process.env.NEXT_PUBLIC_API_URL || 'https://chuoai.onrender.com';
-  // Ondoa trailing slash kama ipo, kisha ongeza /api
-  const cleanUrl = url.replace(/\/+$/, '');
-  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
-};
+// NEXT_PUBLIC_API_URL is inlined by Next.js at build time:
+//   - local dev: set in frontend/.env (http://localhost:8000/api)
+//   - production: set as a Vercel env var (https://chuoai.onrender.com/api)
+// If it is missing from a production build, fail loudly during the build
+// instead of silently falling back to localhost, which caused "Failed to fetch"
+// in production.
+function getApiBaseUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL;
+  if (fromEnv) return fromEnv;
 
-const API_BASE_URL = getBaseUrl();
+  // Local development fallback only. Never reachable in production builds.
+  if (process.env.NODE_ENV !== 'production') {
+    return 'http://localhost:8000/api';
+  }
+
+  throw new Error(
+    'NEXT_PUBLIC_API_URL is not set. Configure it on Vercel ' +
+      '(Production value: https://chuoai.onrender.com/api) or in frontend/.env for local development.'
+  );
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
