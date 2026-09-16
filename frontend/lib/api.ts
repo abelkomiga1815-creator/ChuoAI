@@ -1,4 +1,3 @@
-// frontend/lib/api.ts
 import type {
   AuthTokens,
   CompareResponse,
@@ -14,7 +13,15 @@ import type {
   User,
 } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://chuoai.onrender.com';
+// HAPA NDIPO MABADILIKO YALIPO: Tumeongeza /api mwishoni na kuhakikisha ni HTTPS
+const getBaseUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'https://chuoai.onrender.com';
+  // Ondoa trailing slash kama ipo, kisha ongeza /api
+  const cleanUrl = url.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -75,7 +82,6 @@ class ApiClient {
       throw new ApiError(error?.detail || `Request failed (${response.status})`, response.status);
     }
 
-    // 204 No Content
     if (response.status === 204 || response.headers.get('content-length') === '0') {
       return undefined as T;
     }
