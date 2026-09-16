@@ -38,19 +38,27 @@ app = FastAPI(
 )
 
 # CORS middleware
+# Explicitly allowing origins or using settings.CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.CORS_ORIGINS if hasattr(settings, "CORS_ORIGINS") else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Trusted host middleware
+# UPDATED: Added *.onrender.com and *.vercel.app so production deployment works seamlessly
 if not settings.DEBUG:
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["chuoai.com", "www.chuoai.com", "api.chuoai.com"]
+        allowed_hosts=[
+            "chuoai.com",
+            "www.chuoai.com",
+            "api.chuoai.com",
+            "*.onrender.com",   # Allow Render domain
+            "chuoai.vercel.app" # Allow Vercel domain
+        ]
     )
 
 # Request logging middleware
