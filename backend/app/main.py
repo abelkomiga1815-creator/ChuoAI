@@ -42,7 +42,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS if hasattr(settings, "CORS_ORIGINS") else ["*"],
-    allow_origin_regex=r"https://.*\.(onrender\.com|vercel\.app)",
+    allow_origin_regex=r"https://chuoai-1.onrender.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
