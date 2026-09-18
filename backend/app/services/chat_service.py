@@ -9,7 +9,8 @@ from ..models.message import Message
 from ..ai.router import QueryRouter, QueryCategory
 from ..ai.provider import Message as AIMessage
 from ..core.config import settings
-from ..rag.retrieval import RetrievalService
+from ..rag.retrieval import RetrievalService, RetrievalFilters
+from ..models.source import SourceType, SourceAuthority
 
 SYSTEM_PROMPT = (
     "You are ChuoAI, an AI assistant specialised in Tanzanian higher education: "
@@ -19,7 +20,11 @@ SYSTEM_PROMPT = (
     "your primary source of truth. If the context does not fully answer the "
     "question, say what you're unsure about rather than guessing, and recommend "
     "the person confirm with TCU or the relevant university. "
-    "Reply in the same language as the user (English or Kiswahili)."
+    "Reply in the same language as the user (English or Kiswahili).\n\n"
+    "IMPORTANT: For factual claims about universities, programmes, admission requirements, "
+    "fees, or deadlines, ONLY use information from the provided context. "
+    "If the context lacks sufficient evidence, explicitly state that you could not verify "
+    "the information from official sources."
 )
 
 
@@ -69,21 +74,62 @@ class ChatService:
         """Retrieve relevant context and build the prompt for the LLM."""
         sources: list = []
         context = ""
+        
+        # Extract entities for smart filtering
+        entities = QueryRouter.extract_entities(message)
+        
+        # Create filters based on query type and entities
+        filters = RetrievalFilters()
+        
+        # For factual queries, prefer verified official sources
+        query_lower = message.lower()
+        is_factual = any(word in query_lower for word in [
+            "does", "is", "what", "which", "how many", "when", "where",
+            "requirements", "fees", "deadline", "accredited", "verified",
+            "offer", "has", "have", "offer"
+        ])
+        
+        if is_factual:
+            filters.source_types = [SourceType.TCU_OFFICIAL, SourceType.UNIVERSITY_OFFICIAL, SourceType.GOVERNMENT, SourceType.HESLB, SourceType.NACTVET]
+            filters.authority_levels = [SourceAuthority.LEVEL_1, SourceAuthority.LEVEL_2, SourceAuthority.LEVEL_3, SourceAuthority.LEVEL_4]
+            filters.is_verified = True
+        
+        # Apply entity-based filters
+        if entities.get("university"):
+            from ..models.university import University, UniversityAlias
+            uni = self.db.query(University).filter(
+                (University.name.ilike(f"%{entities['university']}%")) |
+                (University.abbreviation.ilike(f"%{entities['university']}%"))
+            ).first()
+            if not uni:
+                alias = self.db.query(UniversityAlias).filter(
+                    UniversityAlias.alias.ilike(f"%{entities['university']}%")
+                ).first()
+                if alias:
+                    uni = self.db.query(University).filter(University.id == alias.university_id).first()
+            if uni:
+                filters.university_id = uni.id
+        
+        if entities.get("academic_year"):
+            filters.academic_year = entities["academic_year"]
+        
         try:
-            retrieval_result = await self.retrieval_service.retrieve_with_context(message)
+            retrieval_result = await self.retrieval_service.retrieve_with_context(
+                message, 
+                filters=filters
+            )
             context = retrieval_result.get("context", "")
             sources = retrieval_result.get("sources", [])
-        except Exception:
-            # Retrieval is best-effort: if it fails (e.g. no documents ingested
-            # yet, or the vector DB is unavailable) fall back to answering
+        except Exception as e:
+            # Retrieval is best-effort: if it fails, fall back to answering
             # from general knowledge rather than crashing the chat.
             context = ""
             sources = []
-
+        
         system_content = SYSTEM_PROMPT
         if context:
             system_content += f"\n\nCONTEXT:\n{context}"
-
+        
         messages = [AIMessage(role="system", content=system_content)]
 
         # Add conversation history so ChuoAI remembers the current thread.

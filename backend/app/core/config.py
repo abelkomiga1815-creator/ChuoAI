@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 200
     EMBEDDING_MODEL: str = "text-embedding-ada-002"
     TOP_K_RETRIEVAL: int = 5
+    SIMILARITY_THRESHOLD: float = 0.7
     
     # App
     APP_NAME: str = "ChuoAI API"

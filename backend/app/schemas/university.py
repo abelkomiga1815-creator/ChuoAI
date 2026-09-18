@@ -39,6 +39,14 @@ class UniversityUpdate(BaseModel):
     contact_address: Optional[str] = None
     established_year: Optional[str] = None
     is_active: Optional[bool] = None
+    
+    # TCU Verification fields
+    tcu_accredited: Optional[bool] = None
+    tcu_registration_number: Optional[str] = None
+    tcu_accreditation_date: Optional[datetime] = None
+    tcu_status: Optional[str] = None
+    tcu_source_url: Optional[str] = None
+    source_url: Optional[str] = None
 
 
 class UniversityResponse(UniversityBase):
@@ -46,6 +54,15 @@ class UniversityResponse(UniversityBase):
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    # TCU Verification fields
+    tcu_accredited: Optional[bool] = None
+    tcu_registration_number: Optional[str] = None
+    tcu_accreditation_date: Optional[datetime] = None
+    tcu_status: Optional[str] = None
+    tcu_source_url: Optional[str] = None
+    source_url: Optional[str] = None
+    last_verified_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -53,3 +70,26 @@ class UniversityResponse(UniversityBase):
 
 class UniversityDetailResponse(UniversityResponse):
     programme_count: Optional[int] = 0
+
+
+class UniversityAliasCreate(BaseModel):
+    alias: str
+    is_primary: bool = False
+
+
+class UniversityAliasResponse(BaseModel):
+    id: str
+    university_id: str
+    alias: str
+    is_primary: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UniversityVerificationResult(BaseModel):
+    verified: bool
+    tcu_sources_found: int
+    total_sources_found: int
+    verification_date: str

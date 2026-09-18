@@ -42,6 +42,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS if hasattr(settings, "CORS_ORIGINS") else ["*"],
+    allow_origin_regex=r"https://chuo-ai.vercel.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,8 +57,8 @@ if not settings.DEBUG:
             "chuoai.com",
             "www.chuoai.com",
             "api.chuoai.com",
-            "*.onrender.com",   # Allow Render domain
-            "chuoai.vercel.app" # Allow Vercel domain
+            "*.onrender.com",       # Allow Render domain
+            "*.vercel.app"          # Allow frontend (chuo-ai.vercel.app) deployments
         ]
     )
 

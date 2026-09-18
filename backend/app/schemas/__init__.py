@@ -6,3 +6,4 @@ from .chat import *
 from .eligibility import *
 from .comparison import *
 from .admin import *
+from .academic_year import *
