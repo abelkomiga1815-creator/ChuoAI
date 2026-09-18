@@ -1,10 +1,10 @@
-# Render Blueprint - deploys Postgres + ChuoAI backend from this repo.
-# Frontend stays on Vercel (Next.js), pointed at the backend URL below.
+# Render Blueprint - deploys Postgres + ChuoAI backend + frontend from this repo.
 #
 # How to use:
 #   1. Commit + push this file to GitHub.
 #   2. dashboard.render.com -> New -> Blueprint -> connect the ChuoAI repo.
-#   3. Review -> Apply. Render creates the database first, then the backend.
+#   3. Review -> Apply. Render creates the database first, then backend, then frontend.
+#      You will be asked to paste GROQ_API_KEY and NEXT_PUBLIC_API_URL when applying.
 
 databases:
   - name: chuoai-db                # database instance name in Render
@@ -45,8 +45,23 @@ services:
       - key: DEBUG
         value: "false"
       - key: CORS_ORIGINS
-        value: '["https://chuo-ai.vercel.app","http://localhost:3000"]'
+        value: '["http://localhost:3000"]'   # *.onrender.com + *.vercel.app allowed via regex in main.py
       - key: GROQ_API_KEY
         sync: false                    # you will paste your key when pressing Apply
       - key: OPENAI_API_KEY
         sync: false                    # optional - for embeddings/vector RAG later
+
+  - type: web
+    name: chuoai-frontend
+    rootDir: frontend
+    runtime: node
+    plan: starter
+    region: frankfurt                 # keep same region as backend + database
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -p $PORT
+    healthCheckPath: /
+    autoDeploy: true
+    numInstances: 1
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false                    # paste your backend URL + /api, e.g. https://chuoai-backend-xxxx.onrender.com/api
