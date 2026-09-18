@@ -16,27 +16,20 @@ import type {
 // NEXT_PUBLIC_API_URL is inlined by Next.js at build time:
 //   - local dev: set in frontend/.env (http://localhost:8000/api)
 //   - production: set as a build-time env var (e.g. https://chuoai.onrender.com/api)
-// During static generation the module is imported on the server, where we must
-// NOT throw (it would fail the build), so we return a placeholder there. Real
-// requests always happen in the browser, where the inlined value is available.
+// Never throw here: a missing value must not crash the whole app. If it is
+// absent in the browser we fall back to a same-origin /api proxy so the pages
+// still render; individual API calls then fail visibly at request time.
 function getApiBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL;
   if (fromEnv) return fromEnv;
 
-  // Server-side prerendering / build step: no browser exists yet.
-  if (typeof window === 'undefined') {
-    return 'http://localhost:8000/api';
+  // Browser: same-origin proxy fallback instead of crashing the app.
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api`;
   }
 
-  // Local development fallback only. Never reachable in production builds.
-  if (process.env.NODE_ENV !== 'production') {
-    return 'http://localhost:8000/api';
-  }
-
-  throw new Error(
-    'NEXT_PUBLIC_API_URL is not set. Configure it as a build-time environment ' +
-      'variable (e.g. https://chuoai.onrender.com/api) on your hosting platform.'
-  );
+  // Server-side prerendering / build step and local development.
+  return 'http://localhost:8000/api';
 }
 
 const API_BASE_URL = getApiBaseUrl();
