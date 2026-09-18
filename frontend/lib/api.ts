@@ -15,13 +15,18 @@ import type {
 
 // NEXT_PUBLIC_API_URL is inlined by Next.js at build time:
 //   - local dev: set in frontend/.env (http://localhost:8000/api)
-//   - production: set as a Vercel env var (https://chuoai.onrender.com/api)
-// If it is missing from a production build, fail loudly during the build
-// instead of silently falling back to localhost, which caused "Failed to fetch"
-// in production.
+//   - production: set as a build-time env var (e.g. https://chuoai.onrender.com/api)
+// During static generation the module is imported on the server, where we must
+// NOT throw (it would fail the build), so we return a placeholder there. Real
+// requests always happen in the browser, where the inlined value is available.
 function getApiBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL;
   if (fromEnv) return fromEnv;
+
+  // Server-side prerendering / build step: no browser exists yet.
+  if (typeof window === 'undefined') {
+    return 'http://localhost:8000/api';
+  }
 
   // Local development fallback only. Never reachable in production builds.
   if (process.env.NODE_ENV !== 'production') {
@@ -29,8 +34,8 @@ function getApiBaseUrl(): string {
   }
 
   throw new Error(
-    'NEXT_PUBLIC_API_URL is not set. Configure it on Vercel ' +
-      '(Production value: https://chuoai.onrender.com/api) or in frontend/.env for local development.'
+    'NEXT_PUBLIC_API_URL is not set. Configure it as a build-time environment ' +
+      'variable (e.g. https://chuoai.onrender.com/api) on your hosting platform.'
   );
 }
 
